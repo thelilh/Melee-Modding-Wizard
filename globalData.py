@@ -19,9 +19,9 @@ import os
 import csv
 import time
 #import enum
-import ConfigParser
-import tkMessageBox
-import Tkinter as Tk
+import configparser as ConfigParser
+import tkinter as Tk
+from tkinter import messagebox
 
 from datetime import datetime
 from collections import OrderedDict
@@ -123,7 +123,7 @@ def init( programArgs ):
 		'obscureNonSelected': '1',
 	}
 
-	settings = ConfigParser.SafeConfigParser()
+	settings = ConfigParser.ConfigParser()
 	settings.optionxform = str # Tells the settings parser to preserve case sensitivity
 	boolSettings = {}
 	overwriteOptions = OrderedDict() # For code-based mods. Populates with key=customCodeRegionName, value=BooleanVar (to describe whether the regions should be used.)
@@ -704,7 +704,7 @@ def getModsFolderPath( getAll=False ):
 		current path, i.e. most recently used, is determined by the library index setting. """
 
 	pathsString = settings.get( 'General Settings', 'codeLibraryPath' )
-	pathsList = csv.reader( [pathsString] ).next()
+	pathsList = next(csv.reader( [pathsString] ))
 
 	if getAll:
 		return pathsList

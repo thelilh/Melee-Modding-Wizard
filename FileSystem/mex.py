@@ -12,8 +12,8 @@
 
 import struct
 
-from fileBases import DatFile
-from hsdStructures import StructBase
+from .fileBases import DatFile
+from .hsdStructures import StructBase
 
 
 class MexRootData( StructBase ):

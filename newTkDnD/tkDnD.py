@@ -5,24 +5,42 @@
 # Modified by DRGN of Smashboards (Daniel R. Cappel)
 # Version 2.1
 
-from os import path
-import Tkinter, sys
+import tkinter
+import sys
+import os
+import platform
 
 def _load_tkdnd(master):
-    thisModulePath = path.realpath( path.abspath(path.dirname( __file__ )) ) # realpath() should prevents problems in cases of symlinking
+    thisModulePath = os.path.realpath(os.path.abspath(os.path.dirname(__file__)))
 
-    # Determine what OS and python architecture are in use
-    if sys.maxsize > 2**32: # Environment is 64-bit
-        tkdndlib = thisModulePath + "\\tkdnd2.7\\x64"
+    system = platform.system().lower()
+    if system == "windows":
+        arch_folder = "x64" if sys.maxsize > 2**32 else "x86"
+    elif system == "linux":
+        arch_folder = "x86_x64" if sys.maxsize > 2**32 else "i686"
+    elif system == "darwin":
+        # assuming modern macs are arm64, adjust if needed
+        arch_folder = "arm64" if platform.machine() == "arm64" else "x86_x64"
+        system = "macos"
     else:
-        tkdndlib = thisModulePath + "\\tkdnd2.7\\x86"
+        print(f"Unsupported OS: {system}")
+        return
 
-    if path.isdir( tkdndlib ):
-        master.tk.eval('global auto_path; lappend auto_path {%s}' % tkdndlib)
+    tkdndlib_dir = os.path.join(thisModulePath, "tkdnd295", system, arch_folder)
+
+    if not os.path.isdir(tkdndlib_dir):
+        print(f"Invalid tkdnd library path!: {tkdndlib_dir}")
+        return
+
+    master.tk.eval(f'global auto_path; lappend auto_path {{{tkdndlib_dir}}}')
+
+    try:
         master.tk.eval('package require tkdnd')
         master._tkdnd_loaded = True
-    else:
-        print( 'Invalid tkdnd library path!:', tkdndlib )
+    except Exception as e:
+        print(f"Failed to load tkdnd package: {e}")
+
+
 
 
 class TkDnD(object):
@@ -92,7 +110,7 @@ class TkDnD(object):
 
         A, a, b, D, d, m, T, W, X, Y, x, y = args
 
-        event = Tkinter.Event()
+        event = tkinter.Event()
         event.action = A       # Current action of the drag and drop operation.
         event.action_list = a  # Action list supported by the drag source.
         event.mouse_button = b # Mouse button pressed during the drag and drop.

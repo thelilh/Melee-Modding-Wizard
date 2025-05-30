@@ -18,10 +18,10 @@ import globalData
 from binascii import hexlify
 from collections import OrderedDict
 
-from fileBases import FileBase
-from hsdFiles import DatFile
+from .fileBases import FileBase
+from .hsdFiles import DatFile
 from FileSystem import hsdStructures
-from hsdStructures import StructBase, TableStruct, DataBlock
+from .hsdStructures import StructBase, TableStruct, DataBlock
 from basicFunctions import msg, printStatus, reverseDictLookup, uHex, roundTo32
 
 

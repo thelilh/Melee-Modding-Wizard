@@ -12,7 +12,6 @@
 # DTW's Structural Analysis tab or the following thread/post are useful for more details on structures:
 # 		https://smashboards.com/threads/melee-dat-format.292603/post-21913374
 
-import dol		# Not imported like the rest to prevent cyclic import
 import inspect
 
 from .audioFiles import *
@@ -40,6 +39,7 @@ def registerStructureClasses():
 
 
 def fileFactory( *args, **kwargs ):
+	import dol
 
 	""" Parse out the file name from isoPath, and use that to 
 		determine what class to initialize the file as. If the keyword 

@@ -14,8 +14,8 @@
 
 import struct
 import time, math
+from itertools import zip_longest as zip
 
-from itertools import izip
 from collections import OrderedDict
 
 import globalData
@@ -702,7 +702,7 @@ class StructBase( object ):
 		if self.branchSize != -1:
 			return self.branchSize
 
-		# tic = time.clock()
+		# tic = time.time()
 
 		structsCounted = [ self.offset ]
 		totalSize = self.length + self.padding
@@ -724,7 +724,7 @@ class StructBase( object ):
 
 		self.branchSize = checkChildren( self, totalSize )
 
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'getBranchSize time:', toc-tic
 
 		return self.branchSize
@@ -3227,7 +3227,7 @@ class MapSpotTable( StructBase ):
 		""" Returns a list of vertex objects. """
 
 		valueIterator = iter( self.getValues() )
-		return [ Vertex((xCoord, yCoord, 0)) for xCoord, yCoord in izip(valueIterator, valueIterator) ]
+		return [ Vertex((xCoord, yCoord, 0)) for xCoord, yCoord in zip(valueIterator, valueIterator) ]
 
 
 class MapLinkTable( StructBase ):

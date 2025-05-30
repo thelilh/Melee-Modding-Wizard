@@ -18,11 +18,12 @@ import webbrowser
 from binascii import hexlify
 
 # External GUI dependencies
-import ttk
-import tkFileDialog
-import Tkinter as Tk
+from tkinter import ttk
+from tkinter import filedialog as tkFileDialog
+import tkinter as Tk
 from PIL import Image, ImageTk
-from tkMessageBox import askyesno
+from tkinter.messagebox import askyesno
+
 from FileSystem.charFiles import CharCostumeFile
 from FileSystem.hsdFiles import StageFile
 
@@ -33,23 +34,24 @@ from FileSystem import fileFactory, SisFile, MusicFile, CharDataFile, CharAnimFi
 from FileSystem.disc import Disc
 from FileSystem.fileBases import FileBase
 from basicFunctions import (
-		grammarfyList, msg, printStatus, copyToClipboard, removeIllegalCharacters, 
-		uHex, humansize, createFolders, saveAndShowTempFileData
-	)
+    grammarfyList, msg, printStatus, copyToClipboard, removeIllegalCharacters, 
+    uHex, humansize, createFolders, saveAndShowTempFileData
+)
 from guiSubComponents import (
-		ClickText,
-		cmsg,
-		exportSingleTexture,
-		importGameFiles,
-		importSingleTexture,
-		exportSingleFileWithGui,
-		importSingleFileWithGui,
-		getNewNameFromUser,
-		DisguisedEntry,
-		ToolTip, NeoTreeview
-	)
+    ClickText,
+    cmsg,
+    exportSingleTexture,
+    importGameFiles,
+    importSingleTexture,
+    exportSingleFileWithGui,
+    importSingleFileWithGui,
+    getNewNameFromUser,
+    DisguisedEntry,
+    ToolTip, NeoTreeview
+)
 from textureEditing import TexturesEditor
 from tools import CharacterColorConverter, SisTextEditor
+
 
 
 class DiscTab( ttk.Frame ):
@@ -1129,7 +1131,7 @@ class DiscTab( ttk.Frame ):
 		# Check if the user canceled; in which case the above will return an empty list
 		if not filePaths: return False
 
-		tic = time.clock()
+		tic = time.time()
 
 		# Attempt to import the files
 		failedImports = []
@@ -1147,7 +1149,7 @@ class DiscTab( ttk.Frame ):
 			globalData.disc.replaceFile( discFile, newFile, countAsNewFile=False )
 			newFile.recordChange( 'New file', 'New file' )
 			
-		toc = time.clock()
+		toc = time.time()
 		print( 'time to import: ' + str(toc-tic) )
 
 		# Notify the user of the results

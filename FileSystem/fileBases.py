@@ -16,13 +16,13 @@ import struct
 import codecs
 import os, sys
 import time, math
-import tkMessageBox
+from tkinter import messagebox
 import ruamel.yaml
 from PIL import Image, ImageTk
 
 # Internal dependencies
 import globalData
-import hsdStructures
+from .hsdStructures import *
 from tplCodec import TplDecoder, TplEncoder
 from basicFunctions import uHex, msg, printStatus, createFolders
 
@@ -824,7 +824,7 @@ class DatFile( FileBase ):
 			This works by checking whether a structure pointed to by a root/ref node also has another pointer to it within the data section. """
 
 		try:
-			# tic = time.clock()
+			# tic = time.time()
 
 			# Get a list of the pointer values in the data section (structure offsets)
 			self.rootStructNodes = []; self.rootLabelNodes = []; self.refStructNodes = []; self.refLabelNodes = []
@@ -845,7 +845,7 @@ class DatFile( FileBase ):
 				else:
 					self.refStructNodes.append( entry )
 
-			# toc = time.clock()
+			# toc = time.time()
 			# print '\ttime to separate node lists:', toc-tic
 			# print 'dspv:', len( dataSectionPointerValues )
 
@@ -1581,7 +1581,7 @@ class DatFile( FileBase ):
 			else: warning = 'The changes below will be forgotten if you change or reload the currently loaded file before saving. Are you sure you want to do this?\n\n'
 			warning += '\n'.join( self.unsavedChanges )
 
-			noChangesNeedSaving = tkMessageBox.askyesno( 'Unsaved Changes', warning )
+			noChangesNeedSaving = messagebox.askyesno( 'Unsaved Changes', warning )
 
 		if noChangesNeedSaving: # Forget the past changes
 			self.unsavedChanges = []
@@ -1924,7 +1924,7 @@ class DatFile( FileBase ):
 		imageDataOffsetsFound = set()
 		texturesInfo = []
 		
-		# tic = time.clock()
+		# tic = time.time()
 
 		try:
 			# Get the data section structure offsets, and separate out main structure references
@@ -1981,7 +1981,7 @@ class DatFile( FileBase ):
 		except Exception as err:
 			print( 'Encountered an error during texture identification: {}'.format(err) )
 		
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'image identification time:', toc - tic
 
 		# Sort the texture info tuples by offset
@@ -1994,7 +1994,7 @@ class DatFile( FileBase ):
 		""" This is a more efficient alternative to getting the image data struct 
 			and calling .getParents() or .getAttributes() on it. """
 
-		#tic = time.clock()
+		#tic = time.time()
 
 		# Get the data section structure offsets, and separate out main structure references
 		# hI = self.headerInfo
@@ -2043,7 +2043,7 @@ class DatFile( FileBase ):
 		else:
 			mipLevel = -1
 
-		#print('header seek time: ' + str(time.clock() - tic) )
+		#print('header seek time: ' + str(time.time() - tic) )
 
 		return width, height, imageType, isMipMap, int(minLOD), int(maxLOD), mipLevel
 

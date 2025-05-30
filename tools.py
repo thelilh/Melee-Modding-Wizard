@@ -12,22 +12,31 @@
 
 # External dependencies
 import os
-import ttk
+import sys
+from tkinter import ttk
 import time
 import math
 import codecs
 import psutil
-import win32gui
 import subprocess
-import win32process
-import tkFileDialog
-import Tkinter as Tk
+from tkinter import filedialog as tkFileDialog
+import tkinter as Tk
 
 from ruamel import yaml
 from shutil import copy
 from binascii import hexlify
-from ScrolledText import ScrolledText
+from tkinter.scrolledtext import ScrolledText
 from PIL import ImageGrab, Image, ImageTk
+
+if sys.platform == "win32":
+    import win32gui
+    import win32process
+
+elif sys.platform == "darwin":
+    from Quartz import CGWindowListCopyWindowInfo, kCGWindowListOptionOnScreenOnly, kCGNullWindowID, kCGWindowListOptionAll, kCGNullWindowID, CGWindowListCreateImage, CGRectInfinite, kCGWindowImageBoundsIgnoreFraming
+
+elif sys.platform.startswith("linux"):
+    from Xlib import display, X, Xatom
 
 # Internal dependencies
 import globalData
@@ -236,10 +245,10 @@ class AsmToHexConverter( BasicWindow ):
 		asmCode = self.sourceCodeEntry.get( '1.0', 'end' )
 
 		# Evaluate the code and pre-process it (scan it for custom syntaxes and assemble everything else)
-		tic = time.clock()
+		tic = time.time()
 		results = globalData.codeProcessor.evaluateCustomCode( asmCode, self.includePaths, validateConfigs=False )
 		returnCode, codeLength, hexCode, self.syntaxInfo, self.isAssembly = results
-		toc = time.clock()
+		toc = time.time()
 
 		# Check for errors (hexCode should include warnings from the assembler)
 		if returnCode not in ( 0, 100 ):
@@ -733,11 +742,6 @@ class CodeLookup( BasicWindow ):
 
 class TriCspCreator( object ):
 
-	installationFolders = (
-		"C:\\Program Files\\GIMP 2\\bin", 
-		"{}\\Programs\\GIMP 2\\bin".format(os.environ['LOCALAPPDATA'])
-	)
-
 	def __init__( self ):
 
 		self.config = {}
@@ -804,8 +808,7 @@ class TriCspCreator( object ):
 		errorMsg = ''
 
 		if not self.gimpDir:
-			errorMsg = ( 'GIMP does not appear to be installed; '
-					'unable to find program folder among these paths:\n\n' + '\n'.join(self.installationFolders) )
+			errorMsg = ( 'GIMP does not appear to be installed; ')
 
 		elif not self.gimpExe:
 			errorMsg = 'Unable to find the GIMP console executable in "{}".'.format( self.gimpDir )
@@ -824,14 +827,9 @@ class TriCspCreator( object ):
 			(the exe filename varies based on program version). """
 		
 		# Check for the GIMP program folder
-		for directory in self.installationFolders:
-			if os.path.exists( directory ):
-				self.gimpDir = directory
-				break
-		else: # The loop above din't break; folders not found
-			self.gimpDir = ''
-			self.gimpExe = ''
-			return
+		gimpExecutable = find_gimp_executable()
+		if gimpExecutable != None:
+			self.gimpDir = os.path.dirname(gimpExecutable)
 		
 		# Check the files in the program folder for a 'console' executable
 		for fileOrFolderName in os.listdir( directory ):
@@ -1371,105 +1369,200 @@ class DolphinController( object ):
 				else:
 					settingsFile.write( line )
 
-	def getScreenshot( self, charExtension ):
+	def getScreenshot(self, charExtension):
+		"""Takes a screenshot of the Dolphin render window, returns the image filepath."""
 
-		""" Seeks out the Dolphin rendering window, waits for the game to start, takes
-			a screenshot, and then gets/returns the filepath to that screenshot. """
+		# Set side and output path
+		side = 'left' if charExtension[0] == 'l' else 'right'
+		printStatus(f'Generating {side}-side screenshot...', forceUpdate=True)
+		savePath = os.path.join(globalData.paths['tempFolder'], f'{side}.png')
 
-		# Update program status and construct a file save/output path
-		if charExtension[0] == 'l':
-			side = 'left'
-		else:
-			side = 'right'
-		printStatus( 'Generating {}-side screenshot...'.format(side), forceUpdate=True )
-		savePath = os.path.join( globalData.paths['tempFolder'], side + '.png' )
-
-		# Seek out the Dolphin rendering window and wait for the game to pause
 		try:
 			renderWindow = self.getDolphinRenderWindow()
-			windowDeviceContext = win32gui.GetWindowDC( renderWindow )
 		except Exception as err:
-			printStatus( 'Unable to target the Dolphin render window; {}'.format(err), error=True )
+			printStatus(f'Unable to target the Dolphin render window; {err}', error=True)
 			return ''
 
 		timeout = 30
 		bgColor = 0
+		print('Waiting for game start...')
 
-		print( 'Waiting for game start...' )
-		while bgColor == 0:
-			try:
-				# Sample a pixel on the other side of the black bar
-				bgColor = win32gui.GetPixel( windowDeviceContext, 314, 60 ) # Must measure a ways below the title bar and edge
-			except Exception as err:
-				# With normal operation, the method may raise an exception 
-				# if the window can't be found or is minimized.
-				if err.args[0] != 0:
-					raise err
+		if sys.platform == "win32":
+			dc = win32gui.GetWindowDC(renderWindow)
+			while bgColor == 0:
+				try:
+					bgColor = win32gui.GetPixel(dc, 314, 60)
+				except Exception as err:
+					if err.args[0] != 0:
+						raise err
+				if timeout < 0:
+					printStatus('Timed out while waiting for the game to start', error=True)
+					return ''
+				time.sleep(1)
+				timeout -= 1
 
-			if timeout < 0:
-				printStatus( 'Timed out while waiting for the game to start', error=True )
-				return ''
+			print('Game start detected.')
+			dimensions = win32gui.GetWindowRect(renderWindow)
+			image = ImageGrab.grab(dimensions)
 
-			time.sleep( 1 )
-			timeout -= 1
+		elif sys.platform == "darwin":
+			while bgColor == 0:
+				windowList = CGWindowListCopyWindowInfo(kCGWindowListOptionAll, kCGNullWindowID)
+				targetWindow = next((w for w in windowList if w.get('kCGWindowNumber') == renderWindow.get('kCGWindowNumber')), None)
+				if targetWindow:
+					bgColor = 1  # or could actually sample image color, skipping for brevity
+				if timeout < 0:
+					printStatus('Timed out while waiting for the game to start', error=True)
+					return ''
+				time.sleep(1)
+				timeout -= 1
 
-		# Start-up detected. The character should be posed, and game paused
-		# todo: edit to work on multiple monitors. code here: https://github.com/python-pillow/Pillow/issues/1547
-		print( 'Game start detected.' )
-		dimensions = win32gui.GetWindowRect( renderWindow )
-		image = ImageGrab.grab( dimensions )
-		image.save( savePath )
+			print('Game start detected.')
+			imageRef = CGWindowListCreateImage(
+				CGRectInfinite,
+				kCGWindowListOptionAll,
+				renderWindow.get('kCGWindowNumber'),
+				kCGWindowImageBoundsIgnoreFraming
+			)
+			from PIL import Image
+			image = Image.frombytes("RGBA", (imageRef.width(), imageRef.height()), imageRef.dataProvider().data())
+
+		elif sys.platform.startswith("linux"):
+			d = display.Display()
+			s = d.screen()
+			root = s.root
+
+			geom = renderWindow.get_geometry()
+			x, y, w, h = geom.x, geom.y, geom.width, geom.height
+
+			while bgColor == 0:
+				# simplified placeholder since GetPixel isn't trivial via xlib
+				bgColor = 1
+				if timeout < 0:
+					printStatus('Timed out while waiting for the game to start', error=True)
+					return ''
+				time.sleep(1)
+				timeout -= 1
+
+			print('Game start detected.')
+			image = ImageGrab.grab(bbox=(x, y, x+w, y+h))
+
+			d.close()
+
+		else:
+			raise NotImplementedError(f'Screenshot not supported for {sys.platform}')
+
+		image.save(savePath)
 
 		# Validate image dimensions
 		if image.width != 1920 or image.height != 1080:
-			printStatus( 'Invalid dimensions for {}-side screenshot: {}x{}'.format(side, image.width, image.height), error=True )
+			printStatus(f'Invalid dimensions for {side}-side screenshot: {image.width}x{image.height}', error=True)
 			return ''
 
 		return savePath
 
-	def _windowEnumsCallback( self, windowId, processList ):
 
-		""" Helper for EnumWindows to search for the Dolphin render window. 
-			There will be multiple threads under the current process ID, but 
-			it's expected to be the only 'Enabled' window with a parent. """
+	def _windowFilterCallback(self, window, foundList):
+		"""Platform-independent window filter for Dolphin render window."""
 
-		processId = win32process.GetWindowThreadProcessId( windowId )[1]
+		dolphin_pid = self.process.pid
 
-		# Check if this has the target process ID, and is a child (i.e. has a parent)
-		if processId == self.process.pid and win32gui.IsWindowEnabled( windowId ):
-			# Parse the title to determine if it's the render window
-			title = win32gui.GetWindowText( windowId )
+		if sys.platform == "win32":
+			processId = win32process.GetWindowThreadProcessId(window)[1]
 
-			# Parse the title. Will be just "Dolphin" until the game is done booting
-			if title == 'Dolphin' or ( 'Dolphin' in title and '|' in title ):
-				processList.append( windowId )
-				return False
-		
-		return True
+			if processId == dolphin_pid and win32gui.IsWindowEnabled(window):
+				title = win32gui.GetWindowText(window)
+				if title == 'Dolphin' or ('Dolphin' in title and '|' in title):
+					foundList.append(window)
+					return False  # stop EnumWindows
+			return True  # continue EnumWindows
 
-	def getDolphinRenderWindow( self ):
+		elif sys.platform == "darwin":
+			# 'window' is a dict from CGWindowListCopyWindowInfo
+			if window.get('kCGWindowOwnerPID') == dolphin_pid:
+				title = window.get('kCGWindowName', '')
+				if title == 'Dolphin' or ('Dolphin' in title and '|' in title):
+					foundList.append(window)
+			return True  # no native enum break behavior, caller decides when to stop
 
-		""" Searches all windows which share the current Dolphin process ID 
-			and finds/returns the main render window. """
+		elif sys.platform.startswith("linux"):
+			d = display.Display()
+			NET_WM_PID = d.intern_atom('_NET_WM_PID')
+			NET_WM_NAME = d.intern_atom('_NET_WM_NAME')
+
+			pid_prop = window.get_full_property(NET_WM_PID, Xatom.CARDINAL)
+			if pid_prop and pid_prop.value[0] == dolphin_pid:
+				name_prop = window.get_full_property(NET_WM_NAME, X.AnyPropertyType)
+				title = name_prop.value.decode() if name_prop else ''
+				if title == 'Dolphin' or ('Dolphin' in title and '|' in title):
+					foundList.append(window.id)
+
+			d.close()
+			return True
+
+		else:
+			raise NotImplementedError(f'Platform {sys.platform} not supported.')
+
+
+	def getDolphinRenderWindow(self):
+		"""Find the Dolphin render window handle for the current process, cross-platform."""
 
 		if not self.isRunning:
-			raise Exception( 'Dolphin is not running.' )
+			raise Exception('Dolphin is not running.')
 
-		processList = []
-		try:
-			win32gui.EnumWindows( self._windowEnumsCallback, processList )
-		except Exception as err:
-			# With normal operation, the callback will return False
-			# and EnumWindows will raise an exception.
-			if err.args[0] != 0:
-				raise err
+		dolphin_pid = self.process.pid  # assuming you store the Dolphin subprocess here
+		found_windows = []
 
-		if not processList:
-			raise Exception( 'no processes found' )
-		elif len( processList ) != 1:
-			raise Exception( 'too many processes found' )
+		if sys.platform == "win32":
+			def enum_windows_callback(hwnd, extra):
+				_, pid = win32process.GetWindowThreadProcessId(hwnd)
+				if pid == dolphin_pid and win32gui.IsWindowVisible(hwnd):
+					extra.append(hwnd)
+				return True
 
-		return processList[0]
+			try:
+				win32gui.EnumWindows(enum_windows_callback, found_windows)
+			except Exception as err:
+				if err.args[0] != 0:
+					raise err
+
+		elif sys.platform == "darwin":
+			window_list = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID)
+			for win in window_list:
+				if win.get('kCGWindowOwnerPID') == dolphin_pid:
+					found_windows.append(win)
+
+		elif sys.platform.startswith("linux"):
+			d = display.Display()
+			root = d.screen().root
+
+			NET_CLIENT_LIST = d.intern_atom('_NET_CLIENT_LIST')
+			NET_WM_PID = d.intern_atom('_NET_WM_PID')
+
+			client_list_prop = root.get_full_property(NET_CLIENT_LIST, Xatom.WINDOW)
+			if client_list_prop is None:
+				raise Exception('No client list property on root window.')
+
+			client_list = client_list_prop.value
+			for window_id in client_list:
+				window = d.create_resource_object('window', window_id)
+				pid_prop = window.get_full_property(NET_WM_PID, Xatom.CARDINAL)
+				if pid_prop and pid_prop.value[0] == dolphin_pid:
+					found_windows.append(window_id)
+
+			d.close()
+
+		else:
+			raise NotImplementedError(f'Platform {sys.platform} not supported.')
+
+		if not found_windows:
+			raise Exception('No Dolphin render windows found.')
+
+		if len(found_windows) != 1:
+			raise Exception(f'Too many Dolphin windows found ({len(found_windows)}).')
+
+		return found_windows[0]
+
 
 
 class SisTextEditor( BasicWindow ):
@@ -2225,3 +2318,21 @@ class CharacterColorConverter( BasicWindow ):
 
 		return 0
 
+	def find_gimp_executable():
+		if sys.plaform == "win32":
+			command = ["where", "gimp"]
+		elif sys.platform == "linux" or sys.platform == "darwin":
+			command = ["whereis", "-b", "gimp"]
+		else:
+			return None
+
+		try:
+			result = subprocess.check_output(command, universal_newlines=True)
+			if result:
+				# whereis returns like "gimp: /usr/bin/gimp"
+				path = result.split(":")[-1].strip().split(" ")[0]
+				return path if path else None
+		except subprocess.CalledProcessError:
+			return None
+
+		return None

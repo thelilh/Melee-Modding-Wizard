@@ -9,22 +9,22 @@
 #		╚═╝     ╚═╝ ╚═╝     ╚═╝  ╚══╝╚══╝ 			 ------                                                   ------
 #		  -  - Melee Modding Wizard -  -  
 
-import ttk
+import tkinter as Tk
+from tkinter import ttk, messagebox
 import time
 import struct
-import tkMessageBox
-import Tkinter as Tk
 
 from PIL import Image, ImageTk
 from binascii import hexlify
-from itertools import izip, count
+from itertools import count
+zip = zip;  
 from collections import OrderedDict
 
 # Internal dependencies
 import globalData
 import codeRegionSettings
 
-from fileBases import FileBase
+from .fileBases import FileBase
 from codeMods import ConfigurationTypes
 from tplCodec import TplDecoder, TplEncoder
 from basicFunctions import uHex, toInt, validHex, printStatus, grammarfyList, findAll, msg
@@ -916,7 +916,7 @@ class Dol( FileBase ):
 						optType = optionDict['type']
 						mask = optionDict.get( 'mask' )
 
-						tic = time.clock()
+						tic = time.time()
 
 						if mask:
 							maskValue = mod.parseConfigValue( optType, mask )
@@ -926,14 +926,14 @@ class Dol( FileBase ):
 						else:
 							value = struct.unpack( ConfigurationTypes[optType], codeInDol )[0]
 							
-						toc = time.clock()
+						toc = time.time()
 
 						mod.configure( name, value )
 						
 						print( 'method 1 value: ', value )
 						print( 'in', toc-tic )
 						
-						tic = time.clock()
+						tic = time.time()
 
 						if mask:
 							maskValue = mod.parseConfigValue( optType, mask )
@@ -946,7 +946,7 @@ class Dol( FileBase ):
 						
 						value = struct.unpack( ConfigurationTypes[optType], codeInDol )[0]
 						
-						toc = time.clock()
+						toc = time.time()
 						print( 'method 2 value: ', value )
 						print( 'in', toc-tic )
 
@@ -1005,7 +1005,7 @@ class Dol( FileBase ):
 		functionOnlyModules = [] # Remember some info on modules composed of only standalone functions
 		requiredDisabledRegions = []
 
-		tic = time.clock()
+		tic = time.time()
 
 		# Primary Mod-Detection pass. Set the state (highlighting & notes) of each module based on whether its codes are found in the DOL.
 		for mod in modsToCheckFor:
@@ -1223,7 +1223,7 @@ class Dol( FileBase ):
 					mod.state = 'disabled'
 
 		# Finished checking for mods (end of allMods loop).
-		toc = time.clock()
+		toc = time.time()
 		print( 'Time to check for installed codes: ' + str(toc-tic) )
 
 		# Re-enable the vanilla disc prompt window if it was disabled
@@ -1354,7 +1354,7 @@ class Dol( FileBase ):
 		# 		headerImageDataOffset, width, height, imageType, _, _, _ = fieldValues
 
 		# 		if headerImageDataOffset == imageDataOffset:
-		# 			#print 'header seek time:', time.clock() - tic
+		# 			#print 'header seek time:', time.time() - tic
 		# 			break
 
 		# 	else: # The loop above didn't break; unable to find the header!

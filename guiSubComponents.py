@@ -12,24 +12,24 @@
 # External dependencies
 import os
 import sys
-import ttk
+from tkinter import ttk
+from tkinter import font as tkfont
 import time
 import struct
-import tkFont
 import random
 import webbrowser
-import tkFileDialog
-import Tkinter as Tk
+from tkinter import filedialog as tkFileDialog
+import tkinter as Tk
 
 from binascii import hexlify
-from tkColorChooser import askcolor
+from tkinter.colorchooser import askcolor
 from PIL import Image, ImageTk, ImageDraw, ImageOps
 
 # Internal dependencies
 import globalData
 import FileSystem
 
-from ScrolledText import ScrolledText
+from tkinter.scrolledtext import ScrolledText
 from basicFunctions import ( createFolders, grammarfyList, printStatus, 
 							uHex, humansize, validHex, rgb2hex, hex2rgb, msg, getFileMd5, 
 							validHex, constructTextureFilename )
@@ -2372,7 +2372,7 @@ class DisguisedEntry( Tk.Entry ):
 	
 	""" An Entry field that blends into its surroundings until hovered over. """
 
-	def __init__( self, parent=None, respectiveLabel=None, background='SystemButtonFace', *args, **kwargs ):
+	def __init__( self, parent=None, respectiveLabel=None, background='#dddddd', *args, **kwargs ):
 		self.respectiveLabel = respectiveLabel
 		self.bindingsCreated = False
 
@@ -3398,7 +3398,7 @@ class ToolTip( object ):
 
 	def configure(self, **opts):
 		for key in opts:
-			if self._opts.has_key(key):
+			if key in self._opts:
 				self._opts[key] = opts[key]
 			else:
 				raise KeyError( 'KeyError: Unknown option: "%s"' %key )

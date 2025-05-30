@@ -1,37 +1,44 @@
-# Pyglet is used for 3D model rendering. attrs/future are dependencies for it
-attrs==20.2.0
-future==0.18.0
-pyglet==1.4.10
+# 3D rendering
+attrs
+future
+pyglet
 
-# Simplifies bit-wise creation, manipulation and interpretation of data.
-# Used for assembling/disassembling character subAction events.
-bitstring==3.1.9
+# Bit manipulation
+bitstring
 
-# Used for compiling into an executable. This is a very 
-# specific version of this tool for Python 2.7.
-cx-Freeze==5.1.1
+# Image processing
+Pillow
 
-# Image loading and editing. Actually appears in the program as PIL
-Pillow==6.2.2
-
-# Retrieves information on running processes and system utilization
-psutil==5.8.0
+# Process and system info
+psutil
 
 # Audio playback
-PyAudio==0.2.11
+PyAudio
 
-# Provides much access to Windows APIs. Actually appears in the 
-# program as win32api, win32gui, and win32process
-pywin32==228
+# Windows-specific API access (win32api, win32gui, win32process)
+pywin32==310; platform_system=="Windows"
 
-# Used for custom JSON loaders to preserve comments when dumping back to file
-ruamel.base==1.0.0
-ruamel.ordereddict==0.4.15
-ruamel.yaml==0.16.13
-ruamel.yaml.clib==0.2.2
+# macOS Cocoa window management
+pyobjc; platform_system=="Darwin"
 
-# Used to compute Dolphin texture hashes
-xxhash==2.0.2
+# Linux X11 window management
+python-xlib; platform_system=="Linux"
+xcffib; platform_system=="Linux"
 
-# For general-purpose enumerations
-enum34==1.1.10
+# Optional: Wayland support for cursed souls
+# python-wayland; platform_system=="Linux"
+
+# JSON with comment support
+ruamel.base
+ruamel.yaml
+ruamel.yaml.clib
+
+# Hashing
+xxhash
+
+# Enums (legacy/backward compatibility)
+enum34
+
+cx-Freeze
+pyglet
+tk

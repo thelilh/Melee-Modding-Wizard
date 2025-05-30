@@ -10,14 +10,12 @@
 #		  -  - Melee Modding Wizard -  -  
 
 # External dependencies
-import ttk
+import tkinter as Tk
+from tkinter import ttk, messagebox, TclError
 import math
 import time
 import enum
-import tkMessageBox
-import Tkinter as Tk
 from PIL import Image, ImageTk
-from Tkinter import TclError
 from binascii import hexlify
 from collections import OrderedDict
 
@@ -504,7 +502,7 @@ class TexturesEditorTab( ttk.Frame ):
 		self.datDestination.set( self.file.isoPath )
 		self.updatePrevNextFileButtons()
 
-		tic = time.clock()
+		tic = time.time()
 
 		texturesShown = totalTextureSpace = 0
 		filteredTexturesInfo = []
@@ -588,7 +586,7 @@ class TexturesEditorTab( ttk.Frame ):
 			return
 
 		elif filteredTexturesInfo:
-			# tic = time.clock()
+			# tic = time.time()
 			# if 0: # Disabled, until this process can be made more efficient
 			# 	#print 'using multiprocessing decoding'
 
@@ -619,7 +617,7 @@ class TexturesEditorTab( ttk.Frame ):
 
 		self.scanningFile = False
 
-		toc = time.clock()
+		toc = time.time()
 		print( 'scan time: ' + str(toc - tic) )
 
 		if useCache:
@@ -651,9 +649,9 @@ class TexturesEditorTab( ttk.Frame ):
 				self.datTextureTree.textureThumbnails[imageDataOffset] = errorImage
 			else:
 				try:
-					#tic = time.clock()
+					#tic = time.time()
 					pilImage = self.file.getTexture( imageDataOffset, width, height, imageType, imageDataLength, getAsPilImage=True )
-					# toc = time.clock()
+					# toc = time.time()
 					# print 'time to decode image for', hex(0x20+imageDataOffset) + ':', toc-tic
 
 				except Exception as errMessage:

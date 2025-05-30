@@ -23,9 +23,7 @@ from itertools import chain
 from string import hexdigits
 from binascii import hexlify
 
-# Find the best implementation of StringIO available on this platform (used to treat raw binary data as a file).
-try: from cStringIO import StringIO # Preferred for performance.
-except: from StringIO import StringIO
+from io import BytesIO as StringIO
 
 #from basicFunctions import toInt
 

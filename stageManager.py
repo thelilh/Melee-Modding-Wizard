@@ -12,12 +12,12 @@
 
 # External dependencies
 import os
-import ttk
+from tkinter import ttk
 import time
 import struct
 import pyglet
-import tkFileDialog
-import Tkinter as Tk
+from tkinter import filedialog as tkFileDialog
+import tkinter as Tk
 
 from binascii import hexlify
 from collections import OrderedDict
@@ -1129,13 +1129,13 @@ class StageManager( ttk.Frame ):
 		canvas.pack()
 
 		# Init the stage select screen file (separate data groups, build pointer and offset lists, etc.)
-		# tic = time.clock()
+		# tic = time.time()
 		sssFile.initialize()
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'time to initialize:', toc - tic
 		
 		# Add the first two rows (Icicle Mountain through Flat Zone)
-		#tic = time.clock()
+		#tic = time.time()
 		x = 50
 		y = 47
 		for internalStageId in ( 0x16, 2, 4, 6, 0xA, 0xC, 0xE, 3, 5, 7, 0xB, 0xD, 0xF, 0x1B ):
@@ -1209,7 +1209,7 @@ class StageManager( ttk.Frame ):
 		# Add arrows and scroll wheel support for traversing the icons
 		ScrollArrows( canvas )
 
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'time to populate', filename, 'canvas:', toc-tic
 
 	# Icon hover (mousein/mouseout) events for stage icons on the SSS canvas
@@ -3099,9 +3099,9 @@ class StagePropertyEditor( ttk.Frame ):
 			else:
 				skeleton = None # Use rudimentary transforms for joints in renderJoint()
 
-			# tic = time.clock()
+			# tic = time.time()
 			self.engine.renderJoint( joint, showBones=showBones, skeleton=skeleton )
-			# toc = time.clock()
+			# toc = time.time()
 			# print( 'Render time: ' + str(toc-tic) )
 
 		#self.engine.separateBatches()

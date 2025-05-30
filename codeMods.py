@@ -15,8 +15,8 @@ import json
 import time
 import struct
 import codecs
-import urlparse
-import Tkinter as Tk
+from urllib import parse as urlparse
+import tkinter as Tk
 
 from string import hexdigits
 from binascii import hexlify
@@ -1767,7 +1767,7 @@ class CodeLibraryParser():
 		category = os.path.basename( filepath )[:-4]
 
 		# Open the text file and get its contents, creating a list of raw chunks of text for each mod
-		with open( filepath, 'r' ) as modFile:
+		with open(filepath, 'r', encoding='utf-8', errors='replace') as modFile:
 			mods = modFile.read().split( '-==-' )
 
 		# Parse each chunk of text for each mod, to get its info and code changes

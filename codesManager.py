@@ -11,15 +11,15 @@
 
 # External Dependencies
 import os
-import ttk
+from tkinter import ttk
 import time
 import copy
 import struct
 import webbrowser
-import tkMessageBox
-import tkFileDialog
-import Tkinter as Tk
-from ScrolledText import ScrolledText
+from tkinter import messagebox as tkMessageBox
+from tkinter import filedialog as tkFileDialog
+import tkinter as Tk
+from tkinter.scrolledtext import ScrolledText
 
 # Internal Dependencies
 import globalData
@@ -27,8 +27,8 @@ from FileSystem.dol import RevisionPromptWindow
 from basicFunctions import grammarfyList, msg, printStatus, openFolder, removeIllegalCharacters, uHex, validHex
 from codeMods import CodeMod, ConfigurationTypes, CodeLibraryParser
 from guiSubComponents import (
-	PopupScrolledTextWindow, exportSingleFileWithGui, cmsg, VerticalScrolledFrame, LabelButton, ToolTip, CodeLibrarySelector, 
-	CodeSpaceOptionsWindow, ColoredLabelButton, BasicWindow, DisguisedEntry
+    PopupScrolledTextWindow, exportSingleFileWithGui, cmsg, VerticalScrolledFrame, LabelButton, ToolTip, CodeLibrarySelector, 
+    CodeSpaceOptionsWindow, ColoredLabelButton, BasicWindow, DisguisedEntry
 )
 
 
@@ -425,7 +425,7 @@ class CodeManagerTab( ttk.Frame ):
 		# Minimize calls to onTabChange by unbinding the event handler (which will fire throughout this method; especially in .clear)
 		self.codeLibraryNotebook.unbind( '<<NotebookTabChanged>>' )
 
-		tic = time.clock()
+		tic = time.time()
 
 		# Remember the currently selected tab and its scroll position.
 		currentTab = self.getCurrentTab()
@@ -473,7 +473,7 @@ class CodeManagerTab( ttk.Frame ):
 		if self.parser.stopToRescan:
 			self.restartScan( playAudio )
 		else:
-			toc = time.clock()
+			toc = time.time()
 			print( 'library parsing time:', toc - tic )
 
 			#totalModsInLibraryLabel.set( 'Total Mods in Library: ' + str(len( self.codeModModules )) ) # todo: refactor code to count mods in the modsPanels instead
@@ -1045,7 +1045,7 @@ class CodeManagerTab( ttk.Frame ):
 
 		offerToConvertGecko = globalData.checkSetting( 'offerToConvertGeckoCodes' )
 
-		tic = time.clock()
+		tic = time.time()
 
 		if globalData.disc:
 			dol = globalData.disc.dol
@@ -1151,7 +1151,7 @@ class CodeManagerTab( ttk.Frame ):
 			else:
 				modsToInstall.append( mod )
 
-		toc = time.clock()
+		toc = time.time()
 		print( 'time to check for conflicts:', toc-tic )
 
 		if conflictedMods:
@@ -1363,7 +1363,7 @@ class ModModule( Tk.Frame, object ):
 			stateColor = '#89d989' # Green
 
 		elif state == 'disabled':
-			stateColor = 'SystemButtonFace' # The default widget background color
+			stateColor = '#dddddd' # The default widget background color
 
 		elif state == 'unavailable':
 			stateColor = '#cccccc' # Light Grey
@@ -1859,7 +1859,7 @@ class CodeConstructor( Tk.Frame ):
 			codeChangeModules = codeChangesListFrame.interior.winfo_children()
 
 			# Check if there's only one code change module and it hasn't been selected
-			if len( codeChangeModules ) == 1 and codeChangeModules[0]['bg'] == 'SystemButtonFace':
+			if len( codeChangeModules ) == 1 and codeChangeModules[0]['bg'] == '#dddddd':
 				innerFrame = codeChangeModules[0].winfo_children()[0]
 				innerFrame.event_generate( '<1>' ) # simulates a click event on the module in order to select it
 		newHexField.bind( '<1>', lambda e: removeHelpText( e, codeChangesListFrame ) )
@@ -1903,7 +1903,7 @@ class CodeConstructor( Tk.Frame ):
 		# Create the GUI's frame which will hold/show this code change
 		codeChangeModule = Tk.Frame( codeChangesListFrame.interior, relief='ridge', borderwidth=3 )
 		codeChangeModule.pack( fill='both', expand=1, padx=0, pady=0 )
-		codeChangeModule['bg'] = 'SystemButtonFace'
+		codeChangeModule['bg'] = '#dddddd'
 
 		# Add the passed arguments as properties for this code change [frame] object
 		codeChangeModule.codeChange = codeChange
@@ -2137,7 +2137,7 @@ class CodeConstructor( Tk.Frame ):
 
 		# Loop over the child widgets to search for the currently selected code change module
 		for codeChangeModule in codeChangesListFrame.winfo_children():
-			if codeChangeModule['bg'] != 'SystemButtonFace': return codeChangeModule
+			if codeChangeModule['bg'] != '#dddddd': return codeChangeModule
 		else: return None
 
 	def clearNewHexFieldContainer( self, newHexFieldContainer ):
@@ -2153,7 +2153,7 @@ class CodeConstructor( Tk.Frame ):
 
 		# Deselect any previously selected module
 		previouslySelectedModule = self.getCurrentlySelectedModule( versionTab )
-		if previouslySelectedModule: previouslySelectedModule['bg'] = 'SystemButtonFace'
+		if previouslySelectedModule: previouslySelectedModule['bg'] = '#dddddd'
 
 		# Get the frame widget of the code change module that was selected and update its border color.
 		codeChangeModule = event.widget

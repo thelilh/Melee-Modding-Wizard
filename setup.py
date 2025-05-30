@@ -1,135 +1,113 @@
-#!/usr/bin/python
-# This file's encoding: UTF-8, so that non-ASCII characters can be used in strings.
-#
-#		███╗   ███╗ ███╗   ███╗ ██╗    ██╗			-------                                                   -------
-#		████╗ ████║ ████╗ ████║ ██║    ██║		 # -=======---------------------------------------------------=======- #
-#		██╔████╔██║ ██╔████╔██║ ██║ █╗ ██║		# ~ ~ Written by DRGN of SmashBoards (Daniel R. Cappel);  May, 2020 ~ ~ #
-#		██║╚██╔╝██║ ██║╚██╔╝██║ ██║███╗██║		 #            [ Built with Python v2.7.16 and Tkinter 8.5 ]            #
-#		██║ ╚═╝ ██║ ██║ ╚═╝ ██║ ╚███╔███╔╝		  # -======---------------------------------------------------======- #
-#		╚═╝     ╚═╝ ╚═╝     ╚═╝  ╚══╝╚══╝ 			 ------                                                   ------
-#		  -  - Melee Modding Wizard -  -  
+#!/usr/bin/env python3
+# encoding: utf-8
+
+import shutil
+import os
+import sys
+import subprocess
+from cx_Freeze import setup, Executable
+import globalData
 
 programName = "Melee Modding Wizard"
+environIs64bit = sys.maxsize > 2**32
 
-import globalData
-import sys, os, shutil
-from cx_Freeze import setup, Executable
+# figure out platform-specific base
+if sys.platform == 'win32':
+    base = 'Win32GUI'
+elif sys.platform == 'darwin':
+    base = 'Console'  # change to 'GUI' if you're making a mac app bundle
+else:
+    base = 'Console'
 
-# Determine whether the host environment is 64 or 32 bit.
-if sys.maxsize > 2**32: environIs64bit = True
-else: environIs64bit = False
+# figure out platform-specific include files
+include_files = [
+    '.include', 'bin', 'Code Library', 'File Descriptions', 'fonts', 'imgs', 'sfx',
+    'Code Library Manual.txt', 'Command-Line Usage.txt', 'MMW Manual.txt'
+]
 
+if sys.platform == 'win32':
+    include_files.append('- - Asset Test.bat')
 
-# Define what files and folders to include with the build.
-# Dependencies are typically automatically detected, but they might need fine tuning.
+# clean version string
+simpleVersion = '.'.join(filter(str.isdigit, globalData.programVersion.split('.')))
+
+# build options
 buildOptions = dict(
-	packages = [], 
-	excludes = [], 
-	namespace_packages = [ 
-		"ruamel.yaml", # Must have ruamel.base installed as well
-
-		# The following are for pyglet, and might not be needed after transition to Python 3
-		'commands',
-		'UserList',
-		'UserString',
-		'pyglet.clock'
-	],
-	include_files = [
-		'.include',
-		'bin',
-		'Code Library',
-		'File Descriptions',
-		'fonts',
-		'imgs',
-		'sfx',
-		'- - Asset Test.bat',
-		'Code Library Manual.txt',
-		'Command-Line Usage.txt',
-		'MMW Manual.txt'
-	]
+    packages=[
+        "ruamel.yaml",
+        "pyglet.clock"
+    ],
+    excludes=[],
+    include_files=include_files
 )
 
+# executable target
+target_name = f"{programName}.exe" if sys.platform == 'win32' else programName
 
-if len( sys.argv ) > 2:
-	# Check whether to preserve the console window that opens with the GUI 
-	# (arg 1 should be "build", second should be %useConsole%)
-	if sys.argv[2].startswith( 'y' ):
-		base = 'Console'
-	else:
-		base = 'Win32GUI' if sys.platform == 'win32' else None
+executable = Executable(
+    script="main.py",
+    target_name=target_name,
+    icon="imgs/appIcon.ico" if sys.platform == 'win32' else None,
+    base=base
+)
 
-	# Strip off extra command line arguments, because setup isn't 
-	# expecting them and will throw an invalid command error.
-	sys.argv = sys.argv[:2]
-
-else:
-	base = 'Win32GUI' if sys.platform == 'win32' else None
-
-# Normalize the version string for setup ('version' below must be a string, with only numbers or dots)
-simpleVersion = '.'.join( [char for char in globalData.programVersion.split('.') if char.isdigit()] )
-
-
-# Compile the program!
+# run the build
 setup(
-	name = programName,
-	version = simpleVersion,
-	description = 'Modding program for SSBM',
-	options = dict( build_exe = buildOptions ),
-	executables = [
-		Executable(
-			script = "main.py", 
-			targetName = programName + '.exe',
-			icon = '.\\imgs\\appIcon.ico', # For the executable icon. "appIcon.png" is for the running program's window icon.
-			base = base)
-		]
-	)
-print( '\nCompilation complete.' )
+    name=programName,
+    version=simpleVersion,
+    description="Modding program for SSBM",
+    options={"build_exe": buildOptions},
+    executables=[executable]
+)
 
+print("\nCompilation complete.")
 
-# Get the name of the new program folder that will be created in '\build\'
-scriptHomeFolder = os.path.abspath( os.path.dirname(sys.argv[0]) )
-programFolder = ''
-for directory in os.listdir( scriptHomeFolder + '\\build' ):
-	if directory.startswith( 'exe.' ):
-		programFolder = directory
-		break
-else: # The loop above didn't break; programFolder not found
-	print( '\nUnable to locate the new program folder!' )
-	exit( 1 )
+# post-build folder renaming & cleanup
+scriptHomeFolder = os.path.abspath(os.path.dirname(sys.argv[0]))
+buildPath = os.path.join(scriptHomeFolder, 'build')
 
-
-# Set the new program name
-if environIs64bit:
-	newFolderName = '{} - v{} (x64)'.format( programName, globalData.programVersion )
+if os.path.exists(buildPath):
+    programFolder = next((d for d in os.listdir(buildPath) if d.startswith('exe.') or d == programName), None)
 else:
-	newFolderName = '{} - v{} (x86)'.format( programName, globalData.programVersion )
-oldFolderPath = os.path.join( scriptHomeFolder, 'build', programFolder )
-newFolderPath = os.path.join( scriptHomeFolder, 'build', newFolderName )
+    programFolder = None
+
+if not programFolder:
+    print("\nUnable to locate the new program folder!")
+    sys.exit(1)
+
+# make a nice final folder name
+newFolderName = f"{programName} - v{globalData.programVersion} ({'x64' if environIs64bit else 'x86'})"
+oldFolderPath = os.path.join(buildPath, programFolder)
+newFolderPath = os.path.join(buildPath, newFolderName)
+
 nameIndex = 2
-while os.path.exists( newFolderPath ):
-	if nameIndex > 2: # Count already added; split it off first
-		newFolderPath = newFolderPath.rsplit( None, 1 )[0] # Split on first whitepace instance only
-	newFolderPath += ' (' + str(nameIndex) + ')'
-	nameIndex += 1
-os.rename( oldFolderPath, newFolderPath )
-print( '\nNew program folder successfully created and renamed to "' + os.path.basename(newFolderPath) + '".' )
+while os.path.exists(newFolderPath):
+    newFolderPath = f"{newFolderPath.rsplit(' ', 1)[0]} ({nameIndex})"
+    nameIndex += 1
 
+os.rename(oldFolderPath, newFolderPath)
+print(f'\nNew program folder created: "{os.path.basename(newFolderPath)}"')
 
-# Rename the Asset Test script (the dashes are no longer that useful in the new folder)
-os.chdir( newFolderPath )
-os.rename( '- - Asset Test.bat', 'Asset Test.bat' )
+# rename asset test script if on windows
+os.chdir(newFolderPath)
+if sys.platform == 'win32':
+    os.rename('- - Asset Test.bat', 'Asset Test.bat')
 
-
-# Delete the Micro Melee disc and temp files, if present
+# remove temp stuff if present
 try:
-	microMeleePath = os.path.join( newFolderPath, 'bin', "Micro Melee.iso" )
-	os.remove( microMeleePath )
-except: pass
+    os.remove(os.path.join(newFolderPath, 'bin', "Micro Melee.iso"))
+except FileNotFoundError:
+    pass
+
 try:
-	tmpFilesFolder = os.path.join( newFolderPath, 'bin', 'tempFiles' )
-	shutil.rmtree( tmpFilesFolder )
-except: pass
+    shutil.rmtree(os.path.join(newFolderPath, 'bin', 'tempFiles'))
+except FileNotFoundError:
+    pass
 
-
-# Open the new folder
-os.startfile( newFolderPath )
+# open the new folder
+if sys.platform == "win32":
+    os.startfile(newFolderPath)
+elif sys.platform == "darwin":
+    subprocess.run(["open", newFolderPath], check=True)
+else:
+    subprocess.run(["xdg-open", newFolderPath], check=True)

@@ -19,23 +19,27 @@ import time
 import json
 import struct
 import random
-import tkFont
+from tkinter import font as tkFont
 import pyglet
 import os, sys
 import argparse
 import pyaudio, wave
-import Tkinter as Tk
-import ttk, tkMessageBox, tkFileDialog
+import tkinter as tk
+from tkinter import ttk, filedialog as tkFileDialog, messagebox as tkMessageBox
 
 from threading import Thread, Event
 from collections import OrderedDict
 from subprocess import Popen, PIPE, CalledProcessError
 from sys import argv as programArgs 	# Access command line arguments, and files given (drag-and-dropped) to the program icon
 from PIL import Image, ImageTk
-from ctypes import windll, byref, create_unicode_buffer, create_string_buffer
+from ctypes import byref, create_unicode_buffer, create_string_buffer
+import platform
+
+if sys.platform == "win32":
+    from ctypes import windll
 
 # Internal dependencies
-#tic = time.clock()
+#tic = time.time()
 import globalData
 
 from codeMods import CodeLibraryParser
@@ -56,7 +60,7 @@ from stageManager import StageManager
 from audioManager import AudioManager, AudioEngine
 from characterModding import CharModding
 from newTkDnD.tkDnD import TkDnD
-# toc = time.clock()
+# toc = time.time()
 # print('internal module load time: ' + str(toc-tic))
 
 DEBUGMODE = False
@@ -90,12 +94,12 @@ if programArgs[0][-4:] == '.exe':
 			'Folder Access feature, if that is enabled.' ), title='Unable to Create Error Log' )
 
 
-class FileMenu( Tk.Menu, object ):
+class FileMenu( tk.Menu, object ):
 
 	def __init__( self, parent, tearoff=True, *args, **kwargs ):
 		super( FileMenu, self ).__init__( parent, tearoff=tearoff, *args, **kwargs )
 		self.open = False
-		self.recentFilesMenu = Tk.Menu( self, tearoff=True ) # tearoff is the ability to basically turn the menu into a tools window
+		self.recentFilesMenu = tk.Menu( self, tearoff=True ) # tearoff is the ability to basically turn the menu into a tools window
 
 		self.add_cascade( label="Open Recent", menu=self.recentFilesMenu )												# Key shortcut (holding alt)
 		self.add_command( label='Open Last Used Directory', underline=5, command=self.openLastUsedDir )								# L
@@ -201,7 +205,7 @@ class FileMenu( Tk.Menu, object ):
 		msg( '\n'.join(changes), 'Unsaved Changes' )
 
 
-class SettingsMenu( Tk.Menu, object ):
+class SettingsMenu( tk.Menu, object ):
 
 	""" The checkbuttons in these menus are the same objects used internally by the 
 		program (BooleanVars) to track these settings (so there's no extra syncing required). """
@@ -267,7 +271,7 @@ class SettingsMenu( Tk.Menu, object ):
 			msg( "Unable to find and open the '{}' file!".format(filename), error=True )
 
 
-class ToolsMenu( Tk.Menu, object ):
+class ToolsMenu( tk.Menu, object ):
 
 	def __init__( self, parent, tearoff=True, *args, **kwargs ):
 		super( ToolsMenu, self ).__init__( parent, tearoff=tearoff, *args, **kwargs )
@@ -699,7 +703,7 @@ class ToolsMenu( Tk.Menu, object ):
 			print( charName, '', timerStart, actionTag, actionId, speedMultiplier )
 
 
-class AboutMenu( Tk.Menu, object ):
+class AboutMenu( tk.Menu, object ):
 
 	def __init__( self, parent, tearoff=False, *args, **kwargs ): # Create the menu and its contents
 		super( AboutMenu, self ).__init__( parent, tearoff=tearoff, *args, **kwargs )
@@ -855,10 +859,10 @@ class MainMenuOption( object ):
 		self.mouseHovered = False
 
 
-class MainMenuCanvas( Tk.Canvas ):
+class MainMenuCanvas( tk.Canvas ):
 
 	def __init__( self, mainGui, canvasFrame, width, height ):
-		Tk.Canvas.__init__( self, canvasFrame, width=width, height=height, borderwidth=0, highlightthickness=0 )
+		tk.Canvas.__init__( self, canvasFrame, width=width, height=height, borderwidth=0, highlightthickness=0 )
 
 		# Prevent the canvas from being scrollable
 		def noScroll( arg1, arg2 ): return
@@ -923,7 +927,7 @@ class MainMenuCanvas( Tk.Canvas ):
 
 		# Show current coordinates of mouse in debug mode
 		if self.debugMode:
-			self.mouseCoordsVar = Tk.StringVar()
+			self.mouseCoordsVar = tk.StringVar()
 			ToolTip( self, textvariable=self.mouseCoordsVar )
 			self.bind( '<Motion>', self.showCoords )
 
@@ -944,44 +948,47 @@ class MainMenuCanvas( Tk.Canvas ):
 		self.initFont( 'A-OTF Folk Pro, Medium.otf' ) # For the main menu bottom text
 		#print( tkFont.families() )
 
-	def initFont( self, fontName, private=True, enumerable=True ):
-
+	def initFont(self, fontName, private=True, enumerable=True):
 		""" Makes fonts located in file `fontpath` available to the font system.
 
-			`private`     if True, other processes cannot see this font, and this 
-						font will be unloaded when the process dies.
-			`enumerable`  if True, this font will appear when enumerating fonts.
-						 (this is necessary if you want the font to appear with tkFont.families().)
+		`private`: if True, other processes cannot see this font, and this
+				font will be unloaded when the process dies.
+		`enumerable`: if True, this font will appear when enumerating fonts.
 
-			See https://msdn.microsoft.com/en-us/library/dd183327(VS.85).aspx
+		On non-Windows systems, this does nothing (font should be loaded via toolkit).
 		"""
+		print(type(globalData.paths['fontsFolder']), globalData.paths['fontsFolder'])
 
-		# This function was taken from:
-		# https://github.com/ifwe/digsby/blob/f5fe00244744aa131e07f09348d10563f3d8fa99/digsby/src/gui/native/win/winfonts.py#L15
-		# This function is written for Python 2.x. For 3.x, you have to convert the isinstance checks to bytes and str
 
-		FR_PRIVATE  = 0x10
-		FR_NOT_ENUM = 0x20
+		fontpath = os.path.join(globalData.paths['fontsFolder'], fontName)
 
-		fontpath = os.path.join( globalData.paths['fontsFolder'], fontName )
+		if not os.path.isfile(fontpath):
+			print(f"Font file not found: {fontpath}")
+			return False
 
-		if isinstance(fontpath, str):
-			pathbuf = create_string_buffer(fontpath)
+		system = platform.system().lower()
+
+		if system == "windows":
+			FR_PRIVATE  = 0x10
+			FR_NOT_ENUM = 0x20
+
+			flags = (FR_PRIVATE if private else 0) | (FR_NOT_ENUM if not enumerable else 0)
+			pathbuf = create_string_buffer(fontpath.encode('utf-8'))
+
 			AddFontResourceEx = windll.gdi32.AddFontResourceExA
-		elif isinstance(fontpath, unicode):
-			pathbuf = create_unicode_buffer(fontpath)
-			AddFontResourceEx = windll.gdi32.AddFontResourceExW
+			numFontsAdded = AddFontResourceEx(byref(pathbuf), flags, 0)
+
+			if numFontsAdded == 0:
+				filename = os.path.basename(fontpath)
+				print(f"Unable to load font: {filename}")
+
+			return bool(numFontsAdded)
+
 		else:
-			raise TypeError('fontpath must be of type str or unicode')
+			# on linux/macos, font should just be referenced directly when creating text objects
+			print(f"Font loaded locally (no system registration needed): {fontpath}")
+			return True
 
-		flags = (FR_PRIVATE if private else 0) | (FR_NOT_ENUM if not enumerable else 0)
-		numFontsAdded = AddFontResourceEx(byref(pathbuf), flags, 0)
-
-		if numFontsAdded != 2:
-			filename = os.path.basename( fontpath )
-			print( 'Unable to load two fonts from {}.'.format(filename) )
-
-		return bool( numFontsAdded )
 
 	def loadImageSet( self ):
 
@@ -1036,11 +1043,12 @@ class MainMenuCanvas( Tk.Canvas ):
 
 		return Image.composite( colorScreen, blankImage, image )
 
-	def loadBorderImages( self, color ):
-
+	def loadBorderImages(self, color):
 		""" Cuts up the primary border image into multiple pieces, colorizes them, 
 			and converts them into images Tkinter can use on the canvas. Storage is 
 			needed to prevent garbage collection of the images. """
+
+		def i(x): return int(x)  # helper to cast to int
 
 		# If images for this border color have already been created, just switch to those
 		if color in self.borderImgs:
@@ -1049,75 +1057,75 @@ class MainMenuCanvas( Tk.Canvas ):
 			return
 
 		# Load the main border image
-		imagePath = os.path.join( self.mainMenuFolder, "mainBorder.png" )
-		image = Image.open( imagePath )
+		imagePath = os.path.join(self.mainMenuFolder, "mainBorder.png")
+		image = Image.open(imagePath)
 		self.borderImgs[color] = imgsDict = {}
 
 		# Load the main border shadow
-		shadowImagePath = os.path.join( self.mainMenuFolder, "mainBorderShadow.png" )
-		shadowImage = Image.open( shadowImagePath )
+		shadowImagePath = os.path.join(self.mainMenuFolder, "mainBorderShadow.png")
+		shadowImage = Image.open(shadowImagePath)
 
 		# Add color to the image, and combine it with the 'shadow' portion (dark middle part)
-		colorized = self.colorizeImage( image, color )
-		shadowImage.paste( colorized, mask=colorized )
+		colorized = self.colorizeImage(image, color)
+		shadowImage.paste(colorized, mask=colorized)
 
 		# Calculate sizes for the fill sections
-		widthFillTop = self.mainBorderWidth - 118 # -26 - 66 - 26
-		widthFillBot = self.mainBorderWidth - self.bottomTextWidth - 76 # -26 - 26 - 12 - 12
-		widthFillBotLeft = int( math.floor(widthFillBot / 7.0) )
+		widthFillTop = self.mainBorderWidth - 118  # -26 - 66 - 26
+		widthFillBot = self.mainBorderWidth - self.bottomTextWidth - 76  # -26 - 26 - 12 - 12
+		widthFillBotLeft = int(math.floor(widthFillBot / 7.0))
 		widthFillBotRight = widthFillBot - widthFillBotLeft
-		heightFill = self.mainBorderHeight - 102 # -70 - 32
+		heightFill = self.mainBorderHeight - 102  # -70 - 32
 
-		cropped = shadowImage.crop( (0, 70, 26, 88) )
-		resized = cropped.resize( (26, heightFill) )
-		imgsDict['borderLeft'] = ImageTk.PhotoImage( resized )
+		cropped = shadowImage.crop((0, 70, 26, 88))
+		resized = cropped.resize((26, heightFill))
+		imgsDict['borderLeft'] = ImageTk.PhotoImage(resized)
 
-		cropped = shadowImage.crop( (0, 0, 26, 70) )
-		imgsDict['borderTopLeft'] = ImageTk.PhotoImage( cropped )
+		cropped = shadowImage.crop((0, 0, 26, 70))
+		imgsDict['borderTopLeft'] = ImageTk.PhotoImage(cropped)
 
-		cropped = shadowImage.crop( (26, 0, 48, 70) )
-		resized = cropped.resize( (widthFillTop/2, 70) )
-		imgsDict['borderTopLeftFill'] = ImageTk.PhotoImage( resized )
+		cropped = shadowImage.crop((26, 0, 48, 70))
+		resized = cropped.resize((i(widthFillTop / 2), 70))
+		imgsDict['borderTopLeftFill'] = ImageTk.PhotoImage(resized)
 
-		cropped = shadowImage.crop( (48, 0, 114, 70) )
-		imgsDict['borderTopCenter'] = ImageTk.PhotoImage( cropped )
+		cropped = shadowImage.crop((48, 0, 114, 70))
+		imgsDict['borderTopCenter'] = ImageTk.PhotoImage(cropped)
 
-		cropped = shadowImage.crop( (114, 0, 150, 70) )
-		resized = cropped.resize( (widthFillTop/2, 70) )
-		imgsDict['borderTopRightFill'] = ImageTk.PhotoImage( resized )
+		cropped = shadowImage.crop((114, 0, 150, 70))
+		resized = cropped.resize((i(widthFillTop / 2), 70))
+		imgsDict['borderTopRightFill'] = ImageTk.PhotoImage(resized)
 
-		cropped = shadowImage.crop( (150, 0, 176, 70) )
-		imgsDict['borderTopRight'] = ImageTk.PhotoImage( cropped )
+		cropped = shadowImage.crop((150, 0, 176, 70))
+		imgsDict['borderTopRight'] = ImageTk.PhotoImage(cropped)
 
-		cropped = shadowImage.crop( (150, 70, 176, 88) )
-		resized = cropped.resize( (26, heightFill) )
-		imgsDict['borderRight'] = ImageTk.PhotoImage( resized )
+		cropped = shadowImage.crop((150, 70, 176, 88))
+		resized = cropped.resize((26, heightFill))
+		imgsDict['borderRight'] = ImageTk.PhotoImage(resized)
 
-		cropped = shadowImage.crop( (150, 88, 176, 120) )
-		imgsDict['borderBottomRight'] = ImageTk.PhotoImage( cropped )
+		cropped = shadowImage.crop((150, 88, 176, 120))
+		imgsDict['borderBottomRight'] = ImageTk.PhotoImage(cropped)
 
-		cropped = shadowImage.crop( (138, 88, 150, 120) )
-		resized = cropped.resize( (widthFillBotRight, 32) )
-		imgsDict['borderBottomRightFill'] = ImageTk.PhotoImage( resized )
-		resized = cropped.resize( (widthFillBotLeft, 32) )
-		flipped = resized.transpose( Image.FLIP_LEFT_RIGHT )
-		imgsDict['borderBottomLeftFill'] = ImageTk.PhotoImage( flipped )
+		cropped = shadowImage.crop((138, 88, 150, 120))
+		resized = cropped.resize((widthFillBotRight, 32))
+		imgsDict['borderBottomRightFill'] = ImageTk.PhotoImage(resized)
+		resized = cropped.resize((widthFillBotLeft, 32))
+		flipped = resized.transpose(Image.FLIP_LEFT_RIGHT)
+		imgsDict['borderBottomLeftFill'] = ImageTk.PhotoImage(flipped)
 
-		cropped = shadowImage.crop( (126, 88, 138, 120) )
-		imgsDict['borderBottomRightInner'] = ImageTk.PhotoImage( cropped )
-		flipped = cropped.transpose( Image.FLIP_LEFT_RIGHT )
-		imgsDict['borderBottomLeftInner'] = ImageTk.PhotoImage( flipped )
+		cropped = shadowImage.crop((126, 88, 138, 120))
+		imgsDict['borderBottomRightInner'] = ImageTk.PhotoImage(cropped)
+		flipped = cropped.transpose(Image.FLIP_LEFT_RIGHT)
+		imgsDict['borderBottomLeftInner'] = ImageTk.PhotoImage(flipped)
 
-		cropped = shadowImage.crop( (50, 88, 126, 120) )
-		resized = cropped.resize( (self.bottomTextWidth, 32) )
-		imgsDict['borderBottomCenter'] = ImageTk.PhotoImage( resized )
+		cropped = shadowImage.crop((50, 88, 126, 120))
+		resized = cropped.resize((self.bottomTextWidth, 32))
+		imgsDict['borderBottomCenter'] = ImageTk.PhotoImage(resized)
 
-		cropped = shadowImage.crop( (0, 88, 26, 120) )
-		imgsDict['borderBottomLeft'] = ImageTk.PhotoImage( cropped )
-		
-		cropped = shadowImage.crop( (26, 70, 150, 88) )
-		resized = cropped.resize( (self.mainBorderWidth-52, heightFill) )
-		imgsDict['borderMiddle'] = ImageTk.PhotoImage( resized )
+		cropped = shadowImage.crop((0, 88, 26, 120))
+		imgsDict['borderBottomLeft'] = ImageTk.PhotoImage(cropped)
+
+		cropped = shadowImage.crop((26, 70, 150, 88))
+		resized = cropped.resize((self.mainBorderWidth - 52, heightFill))
+		imgsDict['borderMiddle'] = ImageTk.PhotoImage(resized)
 
 		# Add the canvas elements for the first time, or reconfigure their images
 		if not self.currentBorderColor:
@@ -1311,7 +1319,7 @@ class MainMenuCanvas( Tk.Canvas ):
 		else:
 			maxIdle = self.maxIdleTime
 
-		timeTilNextAnim = random.randint( self.minIdleTime, maxIdle )
+		timeTilNextAnim = random.randint( self.minIdleTime, int(maxIdle) )
 		self.afterId = self.after( timeTilNextAnim*1000, self.animateCharImage )
 
 	def animateCharImage( self ):
@@ -1361,7 +1369,7 @@ class MainMenuCanvas( Tk.Canvas ):
 
 	def updateWireframePass( self ):
 		# Copy the mask of the top layer's alpha channel, and combine it with the mask
-		tic = time.clock()
+		tic = time.time()
 		mask = self.fullSizeMask.copy()
 		mask.paste( self.origMask, (0, self._maskPosition) )
 		self.topLayer = ImageTk.PhotoImage( Image.composite(self.origTopLayer, self.wireframeLayer, mask) )
@@ -1373,7 +1381,7 @@ class MainMenuCanvas( Tk.Canvas ):
 
 		if self._maskPosition < (self.origMask.height + self.origTopLayer.height):
 			# Check how much time was needed to perform the pass, and subtract that from the target iteration duration
-			toc = time.clock()
+			toc = time.time()
 			timeToSleep = int( (.040 - (toc - tic)) * 1000 )
 			if timeToSleep < 0:
 				timeToSleep = 0
@@ -1386,7 +1394,7 @@ class MainMenuCanvas( Tk.Canvas ):
 		sleepTime = .04
 		stepSize = 3
 
-		tic = time.clock()
+		tic = time.time()
 		self._fadeProgress += stepSize
 
 		if self._fadeProgress < 0:
@@ -1403,7 +1411,7 @@ class MainMenuCanvas( Tk.Canvas ):
 		self.itemconfigure( self.topLayerId, image=self.topLayer )
 
 		if self._fadeProgress < 100:
-			toc = time.clock()
+			toc = time.time()
 			timeToSleep = int( (sleepTime - (toc - tic)) * 1000 )
 			if opacity == 0:
 				timeToSleep = 300
@@ -1605,15 +1613,15 @@ class MainMenuCanvas( Tk.Canvas ):
 #	====================================================================   Main GUI   =========
 #																		\------------/
 
-class MainGui( Tk.Frame, object ):
+class MainGui( tk.Frame, object ):
 
 	def __init__( self, showPrimaryMenu=True ): # Build the interface
 
-		self.root = Tk.Tk()
+		self.root = tk.Tk()
 		self.root.withdraw() # Keeps the GUI minimized until it is fully generated
 		self.style = ttk.Style()
 
-		globalData.loadProgramSettings( True ) # Load using BooleanVars. Must be done after creating Tk.root
+		globalData.loadProgramSettings( True ) # Load using BooleanVars. Must be done after creating tk.root
 
 		self.loadVolume()
 
@@ -1637,7 +1645,8 @@ class MainGui( Tk.Frame, object ):
 		
 		# Build the main program window
 		#self.root.tk.call( 'wm', 'iconphoto', self.root._w, self.imageBank('appIcon') )
-		self.root.iconbitmap( os.path.join(globalData.paths['imagesFolder'], 'appIcon.ico') )
+		if sys.platform == "win32":
+			self.root.iconbitmap( os.path.join(globalData.paths['imagesFolder'], 'appIcon.ico') )
 		self.root.geometry( str(self.defaultWindowWidth) + 'x' + str(self.defaultWindowHeight) + '+100+50' )
 		self.root.title( "Melee Modding Wizard - v" + globalData.programVersion )
 		self.root.minsize( width=500, height=400 )
@@ -1645,7 +1654,7 @@ class MainGui( Tk.Frame, object ):
 		self.root.protocol( 'WM_DELETE_WINDOW', self.onProgramClose ) # Overrides the standard window close button.
 		
 		# Main Menu Bar & Context Menus
-		self.menubar = Tk.Menu( self.root )																			# Keyboard shortcuts:
+		self.menubar = tk.Menu( self.root )																			# Keyboard shortcuts:
 		self.fileMenu = FileMenu( self.menubar ) # Storing this on the GUI so we can later easily access the 'recent' submenu
 		self.menubar.add_cascade( label='File', menu=self.fileMenu, underline=0 )										# File			[F]
 		self.menubar.add_cascade( label='Settings', menu=SettingsMenu( self.menubar ), underline=0 )					# Settings		[S]
@@ -1792,6 +1801,19 @@ class MainGui( Tk.Frame, object ):
 
 		return image
 
+	def silence_alsa_errors(self):
+		# redirect stderr (fd 2) to /dev/null
+		devnull_fd = os.open(os.devnull, os.O_WRONLY)
+		old_stderr_fd = os.dup(2)  # backup stderr fd
+		os.dup2(devnull_fd, 2)     # redirect stderr to /dev/null
+		os.close(devnull_fd)
+		return old_stderr_fd
+
+	def restore_alsa_errors(self, old_stderr_fd):
+		sys.stderr.flush()
+		os.dup2(old_stderr_fd, 2)  # restore stderr
+		os.close(old_stderr_fd)
+
 	def loadVolume( self ):
 
 		""" Validates program volume (for sound effects and music) from the settings.ini file; 
@@ -1824,72 +1846,45 @@ class MainGui( Tk.Frame, object ):
 			self._soundBank[soundName] = audioFilePath
 
 		# Play the audio clip in a separate thread so that this function is non-blocking
-		audioThread = Thread( target=self._playSoundHelper, args=(audioFilePath,) )
-		audioThread.start()
-
-	def _playSoundHelper( self, soundFilePath ):
-
-		""" Helper (thread-target) function for playSound(). Runs in a separate 
-			thread to prevent audio playback from blocking anything else. """
-
-		p = None
-		wf = None
-		stream = None
-
+		old_stderr = self.silence_alsa_errors()
 		try:
-			# Prevent race conditions on multiple sounds playing at once (can cause a crash); 
-			# Only allow one file to begin playing (create a stream) at a time.
-			self.audioGate.wait() # Blocks until the following is done (event is re-set)
+			audioThread = Thread( target=self._playSoundHelper, args=(audioFilePath,) )
+			audioThread.start()
+		finally:
+			self.restore_alsa_errors(old_stderr)
+
+	def _playSoundHelper(self, soundFilePath):
+		try:
+			p = pyaudio.PyAudio()
+			wf = wave.open(soundFilePath, 'rb')
+
+			self.audioGate.wait()
 			self.audioGate.clear()
 
-			# Instantiate PyAudio and open the target audio file
-			p = pyaudio.PyAudio()
-			wf = wave.open( soundFilePath, 'rb' )
+			stream = p.open(
+				format=p.get_format_from_width(wf.getsampwidth()),
+				channels=wf.getnchannels(),
+				rate=wf.getframerate(),
+				output=True
+			)
+			self.audioGate.set()
 
-			# Open an audio data stream
-			stream = p.open( format=p.get_format_from_width(wf.getsampwidth()),
-							channels=wf.getnchannels(),
-							rate=wf.getframerate(),
-							output=True )
+			data = wf.readframes(1024)
+			while len(data) > 0:
+				chunkFormat = '<' + str(len(data)//2) + 'h'
+				unpackedData = struct.unpack(chunkFormat, data)
+				unpackedData = [int(sample * self.volume) for sample in unpackedData]
+				data = struct.pack(chunkFormat, *unpackedData)
+				stream.write(data)
+				data = wf.readframes(1024)
 
-			self.audioGate.set() # Allow a new sound to be opened/initialized
-
-			# Continuously read/write data from the file to the stream until there is no data left
-			data = wf.readframes( 1024 )
-			while len( data ) > 0:
-				# Unpack the bytes data (series of halfwords) so we can modify the values
-				chunkFormat = '<' + str( len(data)/2 ) + 'h'
-				unpackedData = struct.unpack( chunkFormat, data )
-
-				# Adjust the volume. Multiply each value by the current volume (0-1.0 value)
-				unpackedData = [sample * self.volume for sample in unpackedData]
-
-				# Re-pack the data as raw bytes
-				data = struct.pack( chunkFormat, *unpackedData )
-
-				stream.write( data )
-				data = wf.readframes( 1024 )
-
-		except AttributeError:
-			pass # Program probably closed while playing audio
-
-		except Exception as err:
-			soundFileName = os.path.basename( soundFilePath )
-			print( 'Unable to play "{}" sound.'.format(soundFileName) )
-			print( err )
-
-		# Stop the stream
-		if stream:
 			stream.stop_stream()
 			stream.close()
-
-		# Close PyAudio
-		if p:
 			p.terminate()
-		
-		# Close the wav file
-		if wf:
 			wf.close()
+
+		except Exception as e:
+			print(f'Unable to play "{soundFileName}" sound with PyAudio.')
 
 	def updateMenuBarMenus( self, event ):
 
@@ -1905,7 +1900,7 @@ class MainGui( Tk.Frame, object ):
 
 		activeMenuIndex = self.root.call( event.widget, "index", "active" )
 
-		if isinstance( activeMenuIndex, int ):
+		if isinstance(activeMenuIndex, int) and 0 <= activeMenuIndex < len(self.menubar.winfo_children()):
 			activeMenu = self.menubar.winfo_children()[activeMenuIndex]
 
 			# Check if this menu has a repopulate method (in which case it will also have an open attribute), and call it if the menu is to be opened
@@ -2135,10 +2130,10 @@ class MainGui( Tk.Frame, object ):
 		globalData.rememberFile( targetPath, updateDefaultDirectory )
 
 		# Load the disc, and load the disc's info into the GUI
-		# tic = time.clock()
+		# tic = time.time()
 		globalData.disc = Disc( targetPath )
 		globalData.disc.load()
-		# toc = time.clock()
+		# toc = time.time()
 		# print( 'disc load time:', toc-tic )
 		
 		# Update the Disc File Tree and Disc Details tabs
@@ -2884,9 +2879,9 @@ def buildDiscFromRoot():
 
 	# Build the new disc (the progress bar will be printed by the following method)
 	globalData.loadProgramSettings()
-	tic = time.clock()
+	tic = time.time()
 	returnCode = newDisc.buildNewDisc( savePath )[0]
-	toc = time.clock()
+	toc = time.time()
 
 	# Print result message
 	if returnCode == 0:
@@ -3735,8 +3730,8 @@ if __name__ == '__main__':
 		gui.audioEngine = AudioEngine()
 
 		# For testing...
-		# print('gui load time: ' + str(time.clock()-toc))
-		# print('program load time: ' + str(time.clock()-tic))
+		# print('gui load time: ' + str(time.time()-toc))
+		# print('program load time: ' + str(time.time()-tic))
 		# gui.fileHandler( [r"D:\Tex\SSBM ISO\vanilla test iso\Super Smash Bros. Melee (v1.02).iso"] )
 		# gui.fileMenu.browseCodeLibrary()
 		# gui.loadStageEditor()
@@ -3745,7 +3740,6 @@ if __name__ == '__main__':
 
 		# Start the GUI's mainloop (blocks until the GUI is taken down by .destroy or .quit)
 		gui.root.mainloop()
-
 
 # Program exit codes:
 #

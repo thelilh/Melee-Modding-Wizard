@@ -17,7 +17,7 @@ import time
 import copy
 import struct
 import tempfile
-import tkMessageBox
+import tkinter.messagebox
 
 from binascii import hexlify
 
@@ -25,13 +25,13 @@ from binascii import hexlify
 import globalData
 import codeRegionSettings
 
-from dol import Dol
+from .dol import Dol
 from . import fileFactory
 from FileSystem.charFiles import CharCostumeFile
 from FileSystem.hsdFiles import StageFile
-from audioFiles import MusicFile
+from .audioFiles import MusicFile
 from stageManager import StageSwapTable
-from fileBases import FileBase, BootBin
+from .fileBases import FileBase, BootBin
 from codeMods import CodeLibraryParser
 from basicFunctions import padToNearest, roundTo32, uHex, toHex, toInt, toBytes, humansize, grammarfyList, createFolders, msg, printStatus, ListDict, validHex
 
@@ -1453,7 +1453,7 @@ class Disc( object ):
 		
 		self.updateProgressDisplay( buildMsg, 0, 0, 100 ) # Display the bar and percentage as starting (0%)
 
-		#tic = time.clock() # for performance testing
+		#tic = time.time() # for performance testing
 
 		self.buildFstEntries()
 
@@ -1587,7 +1587,7 @@ class Disc( object ):
 		if originalIsoBinary:
 			originalIsoBinary.close()
 		
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'Time to rebuild disc:', toc-tic
 
 		if not fileWriteSuccessful:
@@ -2290,7 +2290,7 @@ class Disc( object ):
 
 		print( '\nBeginning code installations...' )
 
-		tic = time.clock()
+		tic = time.time()
 
 		for mod in codeMods:
 			if not mod: continue # May be 'None' if a mod wasn't found
@@ -2519,7 +2519,7 @@ class Disc( object ):
 					else: # The loop above didn't break; no functions for this mod are used
 						mod.setState( 'disabled', updateControlPanelCounts=False )
 
-		toc = time.clock()
+		toc = time.time()
 		print( '\nMod installation time: ' + str(toc-tic) )
 
 		# Update the install count shown on the Code Manager tab
@@ -2900,7 +2900,7 @@ class MicroMelee( Disc ):
 			Could be done via xdelta patch, but this saves space. Avoiding files' 
 			.getData() to prevent having to open the source disc multiple times. """
 
-		tic = time.clock()
+		tic = time.time()
 
 		# Load the vanilla game disc
 		vanillaDisc = Disc( vanillaDiscPath )
@@ -2912,11 +2912,11 @@ class MicroMelee( Disc ):
 
 		dataCopiedSinceLastUpdate = 0
 		totalFiles = len( vanillaDisc.files )
-		# tic = time.clock()
+		# tic = time.time()
 		# defaultStageExtId = self.checkDefaultStage()
 		# defaultStageIntId = vanillaDisc.dol.getIntStageIdFromExt( defaultStageExtId )
 		# defaultStage = vanillaDisc.dol.getStageFilename( defaultStageIntId )[1]
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'Time to check default stage:', toc-tic
 		# print 'default stage:', defaultStage
 		# return
@@ -2965,7 +2965,7 @@ class MicroMelee( Disc ):
 		self.isRootFolder = False # Restore to normal so the disc can be rebuilt as normal
 		globalData.settings.set( 'General Settings', 'paddingBetweenFiles', origPadding )
 
-		toc = time.clock()
+		toc = time.time()
 		print( 'Time to build micro melee: ' + str(toc-tic) )
 
 	def buildNewDisc( self, newFilePath='', buildMsg='Building the Micro Melee testing disc:' ):

@@ -9,8 +9,8 @@
 #		╚═╝     ╚═╝ ╚═╝     ╚═╝  ╚══╝╚══╝ 			 ------                                                   ------
 #		  -  - Melee Modding Wizard -  -  
 
-import ttk
-import Tkinter as Tk
+from tkinter import ttk
+import tkinter as Tk
 
 import globalData
 import FileSystem.standaloneStructs as standaloneStructs

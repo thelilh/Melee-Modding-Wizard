@@ -17,8 +17,7 @@ import math
 import array
 import pyglet
 import ctypes
-import win32api
-import Tkinter as Tk
+import tkinter as Tk
 
 from ctypes import string_at
 from operator import add, mul
@@ -41,10 +40,10 @@ pyglet.options['search_local_libs'] = False
 pyglet.options['debug_graphics_batch'] = False
 
 from pyglet import gl
-from pyglet.window import key, Projection
+from pyglet.window import key
 from pyglet.window import Window as pygletWindow
 from pyglet.app.base import EventLoop
-from pyglet.graphics import Group, OrderedGroup, TextureGroup
+from pyglet.graphics import Group, TextureGroup
 #from pyglet.window.event import WindowEventLogger
 
 import globalData
@@ -216,14 +215,18 @@ def matrixMultiply_4x4( matrix1, matrix2 ):
 		M2*A1+N2*E1+O2*I1+P2*M1, M2*B1+N2*F1+O2*J1+P2*N1, M2*C1+N2*G1+O2*K1+P2*O1, M2*D1+N2*H1+O2*L1+P2*P1
 	]
 
+class Projection:
+    def set(self, window_width, window_height, viewport_width, viewport_height):
+        # original Projection's set does something, but we override to do nothing anyway
+        pass
 
-class ProjectionOverride( Projection ):
+class ProjectionOverride(Projection):
+    """ A quick and simple override to Pyglet's default projection.set method. 
+        We don't need it to do anything! """
 
-	""" A quick and simple override to Pyglet's default projection.set method. 
-		We don't need it to do anything! """
+    def set(self, window_width, window_height, viewport_width, viewport_height):
+        pass
 
-	def set( self, window_width, window_height, viewport_width, viewport_height ):
-		pass
 
 
 class RenderEngine( Tk.Frame ):
@@ -276,9 +279,38 @@ class RenderEngine( Tk.Frame ):
 			print( "GLSL version:   " + glsl_version )
 
 		# Set the pyglet parent window to be the tkinter canvas
-		GWLP_HWNDPARENT = -8
-		pyglet_handle = self.window.canvas.hwnd
-		win32api.SetWindowLong( pyglet_handle, GWLP_HWNDPARENT, self.canvas.winfo_id() )
+		if sys.platform == "win32":
+			import win32gui
+			import win32con
+
+			GWLP_HWNDPARENT = -8
+			pyglet_handle = self.window._window._hwnd  # works if you’re using pyglet’s Win32Window subclass
+			parent_handle = self.canvas.winfo_id()
+
+			win32gui.SetWindowLong(pyglet_handle, win32con.GWL_HWNDPARENT, parent_handle)
+
+		elif sys.platform == "darwin":
+			from AppKit import NSApplication
+			from Cocoa import NSWindow
+
+			app = NSApplication.sharedApplication()
+			pyglet_nswindow = self.window._window._nswindow
+			parent_nswindow = self.canvas.winfo_id()  # this might need a proper NSWindow reference if canvas isn't a native window
+
+			# example: parent_nswindow = NSWindow.windowWithWindowNumber_(self.canvas.winfo_id())
+			parent_nswindow.addChildWindow_ordered_(pyglet_nswindow, 0)
+
+		elif sys.platform.startswith("linux"):
+			from Xlib import display, X
+
+			d = display.Display()
+			pyglet_win_id = self.window._window._window
+			parent_win_id = self.canvas.winfo_id()
+
+			pyglet_win = d.create_resource_object('window', pyglet_win_id)
+			pyglet_win.reparent(parent_win_id, 0, 0)
+			d.sync()
+
 
 		# Compile and link the shaders
 		self.shaders = self.compileShader( gl.GL_VERTEX_SHADER, 'vertex' )
@@ -2974,37 +3006,37 @@ class TexturedMaterial( Material ):
 				self.renderEngine.setShaderInt( 'enableTextures', False )
 
 
-class PolygonGroup( OrderedGroup ):
+class PolygonGroup(Group):
+    def __init__(self, renderEngine, pobj, parent=None):
+        super().__init__(parent=parent)
+        self.renderEngine = renderEngine
+        self.parent = parent
 
-	def __init__( self, renderEngine, pobj, parent=None ):
-		self.renderEngine = renderEngine
-		self.parent = parent
+        flags = pobj.getValues('Polygon_Flags')
+        if flags & (1 << 14) and flags & (1 << 15):
+            self.cullMode = gl.GL_FRONT_AND_BACK
+        elif flags & (1 << 14):
+            self.cullMode = gl.GL_FRONT
+        elif flags & (1 << 15):
+            self.cullMode = gl.GL_BACK
+        else:
+            self.cullMode = -1
 
-		# Parse the flags to configure polygon properties
-		flags = pobj.getValues( 'Polygon_Flags' )
-		if flags & 1<<14 and flags & 1<<15:
-			self.cullMode = gl.GL_FRONT_AND_BACK
-		elif flags & 1<<14:
-			self.cullMode = gl.GL_FRONT
-		elif flags & 1<<15:
-			self.cullMode = gl.GL_BACK
-		else:
-			self.cullMode = -1
+        # uncomment if needed
+        # if flags & 1:
+        #     self.windingOrder = gl.GL_CCW
+        # else:
+        #     self.windingOrder = gl.GL_CW
 
-		# if flags & 1:
-		# 	self.windingOrder = gl.GL_CCW # Counter-clockwise
-		# else:
-		# 	self.windingOrder = gl.GL_CW # Clockwise
-	
-	def set_state( self ):
-		# if self.cullMode == -1:
-		# 	gl.glDisable( gl.GL_CULL_FACE )
-		# else:
-		# 	gl.glEnable( gl.GL_CULL_FACE )
-		# 	gl.glCullFace( self.cullMode )
+    def set_state(self):
+        # if self.cullMode == -1:
+        #     gl.glDisable(gl.GL_CULL_FACE)
+        # else:
+        #     gl.glEnable(gl.GL_CULL_FACE)
+        #     gl.glCullFace(self.cullMode)
 
-		# gl.glFrontFace( self.windingOrder )
-		pass
+        # gl.glFrontFace(self.windingOrder)
+        pass
 
-	def unset_state( self ):
-		pass
+    def unset_state(self):
+        pass

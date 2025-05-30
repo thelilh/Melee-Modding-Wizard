@@ -18,12 +18,11 @@ from string import hexdigits
 
 # Internal dependencies
 import globalData
-from fileBases import FileBase
+from .fileBases import FileBase
 from basicFunctions import msg, cmdChannel, allAreEqual
 
 
 class MusicFile( FileBase ):
-
 	""" For HPS files. """
 	
 	def __init__( self, *args, **kwargs ):
@@ -336,7 +335,7 @@ class MusicFile( FileBase ):
 		""" Dumps this file to the temp folder as an HPS, uses MeleeMedia to convert it 
 			to a WAV file, and then returns the filepath to the WAV. """
 
-		#tic = time.clock()
+		#tic = time.time()
 
 		# Export this file in its current HPS form to the temp folder
 		tempInputFilepath = os.path.join( globalData.paths['tempFolder'], self.filename )
@@ -357,7 +356,7 @@ class MusicFile( FileBase ):
 		# Delete the temporary HPS file
 		os.remove( tempInputFilepath )
 
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'time to get as wav:', toc-tic
 
 		self.externalWavFile = outputPath

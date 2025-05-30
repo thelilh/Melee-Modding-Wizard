@@ -18,10 +18,10 @@ from binascii import hexlify
 
 # Internal dependencies
 import globalData
-import hsdStructures
-import standaloneStructs
+from .hsdStructures import *
+from .standaloneStructs import *
 
-from fileBases import DatFile
+from .fileBases import DatFile
 from basicFunctions import printStatus, toInt, msg, uHex, reverseDictLookup
 
 
@@ -1018,7 +1018,7 @@ class StageFile( DatFile ):
 
 		texturesInfo = []
 		
-		# tic = time.clock()
+		# tic = time.time()
 
 		try:
 			# Check for particle effect textures
@@ -1064,7 +1064,7 @@ class StageFile( DatFile ):
 		except Exception as err:
 			print( 'Encountered an error during texture identification: {}'.format(err) )
 		
-		# toc = time.clock()
+		# toc = time.time()
 		# print 'image identification time:', toc - tic
 
 		# Sort the texture info tuples by offset
